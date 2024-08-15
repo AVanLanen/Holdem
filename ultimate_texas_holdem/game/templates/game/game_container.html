@@ -1,0 +1,207 @@
+{% load game_filters %}
+{% load static %}
+
+<div class="bg-green-900 text-white rounded-lg shadow-lg p-6 w-full max-w-6xl mx-auto mt-8" id="game-area">
+<div class="flex justify-between items-center mb-4">
+    <!-- Drew Hold'em Section -->
+    <div class="flex-grow text-center">
+      <h1 class="text-3xl font-bold">Drew Hold'em</h1>
+    </div>
+    <!-- Chips Section -->
+    <div class="bg-yellow-600 text-black rounded-full px-4 py-2 text-sm font-medium">
+      Chips: ${{ player.chips }}
+    </div>
+  </div>
+  <div class="grid grid-cols-3 gap-4">
+    <div class="col-span-2 bg-green-800 rounded-lg p-4">
+      <div class="flex justify-between items-center mb-4">
+        <div class="text-lg font-bold">Dealer's Hand</div>
+        {% if current_round.game_state.status == 'showdown' %}
+          <div class="bg-yellow-600 text-black rounded-full px-4 py-2 text-sm font-medium">{{ dealer_hand }}</div>
+        {% endif %}
+      </div>
+      <div class="grid grid-cols-2 gap-4 w-1/2">
+        {% for card in current_round.game_state.dealer_hand %}
+          <div class="bg-green-700 rounded-lg p-2 flex justify-center items-center w-20 h-28">
+            {% if current_round.game_state.status == 'showdown' %}
+              <img src="{% static card|card_image %}" alt="{{ card }}" class="max-w-full max-h-full object-contain">
+            {% else %}
+              <img src="{% static 'game/assets/normal_cards/individual/card_back/cardBackRed.png' %}" alt="Hidden card" class="max-w-full max-h-full object-contain">
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="bg-green-800 rounded-lg p-4">
+      <div class="flex justify-between items-center mb-4">
+        
+        <div class="bg-red-600 text-white rounded-full px-4 py-2 text-sm font-medium">
+          {{ current_round.game_state.status|title }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="flex justify-center mt-4">
+    <div class="bg-green-700 rounded-lg p-4 w-3/4">
+      <div class="text-lg font-bold mb-4 text-center">Community Cards</div>
+      <div class="flex justify-center items-center space-x-2">
+        {% for card in current_round.game_state.community_cards %}
+          <div class="bg-green-700 rounded-lg p-2 flex justify-center items-center w-16 h-24">
+            <img src="{% static card|card_image %}" alt="{{ card }}" class="max-w-full max-h-full object-contain">
+          </div>
+        {% endfor %}
+        {% for _ in 5|range_filter %}
+          {% if forloop.counter0 >= current_round.game_state.community_cards|length %}
+            <div class="bg-green-700 rounded-lg p-2 flex justify-center items-center w-16 h-24">
+              <img src="{% static 'game/assets/normal_cards/individual/card_back/cardBackRed.png' %}" alt="Hidden card" class="max-w-full max-h-full object-contain">
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 gap-4 mt-4">
+    <div class="bg-green-800 ml-24 w-1/2 rounded-lg p-4">
+      <div class="text-lg font-bold mb-4">Your Hand</div>
+      <div class="grid grid-cols-2 gap-4">
+        {% with player_hand=current_round.game_state.player_hands|get_item:player.id %}
+          {% if player_hand %}
+            {% for card in player_hand %}
+              <div class="bg-green-700 rounded-lg p-2 flex justify-center items-center w-20 h-28">
+                <img src="{% static card|card_image %}" alt="{{ card }}" class="max-w-full max-h-full object-contain">
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="col-span-2 text-center text-gray-500">
+              Waiting for cards...
+            </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+      {% if player_hand_description %}
+        <div class="bg-yellow-600 text-black rounded-full px-4 py-2 text-sm font-medium mt-4 text-center">{{ player_hand_description }}</div>
+      {% endif %}
+    </div>
+    <div class="bg-green-800 rounded-lg p-4">
+      <div class="text-lg font-bold mb-4">Your Bets</div>
+      {% with player_bets=current_round.game_state.player_bets|get_item:player.id %}
+        {% if player_bets %}
+          <p>Ante: ${{ player_bets.ante }}</p>
+          <p>Blind: ${{ player_bets.blind }}</p>
+          <p>Trips: ${{ player_bets.trips }}</p>
+          <p>Play: ${{ player_bets.play }}</p>
+        {% else %}
+          <p>No bets placed yet.</p>
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+  <div class="flex justify-center mt-4">
+    <div class="w-3/4">
+      {% if 'place_bets' in available_actions %}
+        <form hx-post="{% url 'game_action' game.id %}" hx-target="#game-area" hx-swap="innerHTML" class="grid grid-cols-5 gap-4"
+              x-data="{ anteBet: 0, tripsBet: 0, activebet: 'ante' }">
+          <input type="hidden" name="action" value="place_bets">
+          <input type="hidden" name="ante_blind" x-bind:value="anteBet">
+          <input type="hidden" name="trips" x-bind:value="tripsBet">
+          
+          <div class="col-span-5 flex justify-between mb-2">
+            <span>Ante/Blind: $<span x-text="anteBet"></span></span>
+            <span>Trips: $<span x-text="tripsBet"></span></span>
+          </div>
+          
+          <div class="col-span-5 flex justify-center mb-2">
+            <button type="button" @click="activebet = 'ante'" 
+                    x-bind:class="{'bg-yellow-600 text-black border-yellow-400': activebet === 'ante', 'bg-red-600 text-white border-red-400': activebet !== 'ante'}"
+                    class="px-4 py-2 border-2 border-black rounded-l-md">
+              Ante
+            </button>
+            <button type="button" @click="activebet = 'trips'" 
+                    x-bind:class="{'bg-yellow-600 text-black border-yellow-400': activebet === 'trips', 'bg-red-600 text-white border-red-400': activebet !== 'trips'}"
+                    class="px-4 py-2 border-2 border-black rounded-r-md">
+              Trips
+            </button>
+          </div>
+          <div class="col-span-5 flex flex-col space-y-4 items-center">
+            <div class="flex justify-center space-x-4">
+              <button type="button" @click="activebet === 'ante' ? anteBet += 1 : tripsBet += 1" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                $1
+              </button>
+              <button type="button" @click="activebet === 'ante' ? anteBet += 5 : tripsBet += 5" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                $5
+              </button>
+              <button type="button" @click="activebet === 'ante' ? anteBet += 25 : tripsBet += 25" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                $25
+              </button>
+              <button type="button" @click="activebet === 'ante' ? anteBet += 100 : tripsBet += 100" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                $100
+              </button>
+              <button type="button" @click="activebet === 'ante' ? anteBet = 0 : tripsBet = 0" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-red-600 text-white hover:bg-red-700 h-10 px-4 py-2 border-2 border-black">
+                Clear
+              </button>
+            </div>
+            <div class="flex justify-center w-full">
+              <button type="submit" class="w-1/3 border-2 border-black rounded-md inline-flex items-center justify-center whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2">
+                Place Bets
+              </button>
+            </div>
+          </div>
+        </form>
+      {% else %}
+        <div class="flex justify-center space-x-4">
+          {% for action in available_actions %}
+            {% if action == 'check' %}
+              <button hx-post="{% url 'game_action' game.id %}"
+                      hx-vals='{"action": "check"}'
+                      hx-target="#game-area"
+                      hx-swap="innerHTML"
+                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                Check
+              </button>
+            {% elif action == 'bet_1x' %}
+              <button hx-post="{% url 'game_action' game.id %}"
+                      hx-vals='{"action": "bet", "multiplier": 1}'
+                      hx-target="#game-area"
+                      hx-swap="innerHTML"
+                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                Bet 1x
+              </button>
+            {% elif action == 'bet_2x' %}
+              <button hx-post="{% url 'game_action' game.id %}"
+                      hx-vals='{"action": "bet", "multiplier": 2}'
+                      hx-target="#game-area"
+                      hx-swap="innerHTML"
+                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                Bet 2x
+              </button>
+            {% elif action == 'bet_3x' %}
+              <button hx-post="{% url 'game_action' game.id %}"
+                      hx-vals='{"action": "bet", "multiplier": 3}'
+                      hx-target="#game-area"
+                      hx-swap="innerHTML"
+                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                Bet 3x
+              </button>
+            {% elif action == 'bet_4x' %}
+              <button hx-post="{% url 'game_action' game.id %}"
+                      hx-vals='{"action": "bet", "multiplier": 4}'
+                      hx-target="#game-area"
+                      hx-swap="innerHTML"
+                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-600 text-black hover:bg-yellow-700 h-10 px-4 py-2 border-2 border-black">
+                Bet 4x
+              </button>
+            {% elif action == 'fold' %}
+              <button hx-post="{% url 'game_action' game.id %}"
+                      hx-vals='{"action": "fold"}'
+                      hx-target="#game-area"
+                      hx-swap="innerHTML"
+                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-red-600 text-white hover:bg-red-700 h-10 px-4 py-2 border-2 border-black">
+                Fold
+              </button>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="error-message" class="alert alert-danger" style="display: none;"></div>
+<div id="game-area">
+    {% include "game/game_container.html" %}
+</div>
+{% endblock %}
+
+<script>
+document.body.addEventListener('htmx:afterOnLoad', (event) => {
+    const xhr = event.detail.xhr;
+    const triggerHeader = xhr.getResponseHeader('HX-Trigger');
+    if (triggerHeader) {
+        const triggers = JSON.parse(triggerHeader);
+        if (triggers.showError) {
+            const errorMessage = triggers.showError;
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.innerText = errorMessage;
+            errorDiv.style.display = 'block';
+            // Optionally, hide the error after a few seconds
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+    }
+});
+</script>

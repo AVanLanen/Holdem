@@ -1,0 +1,33 @@
+<h2 class="text-xl font-bold mb-4">Available Games</h2>
+{% if available_games %}
+  <ul class="space-y-2">
+    {% for game in available_games %}
+      <li id="game-{{ game.id }}" class="flex justify-between items-center bg-green-700 rounded-lg p-3">
+        <span class="text-lg">Game {{ game.id }} - {{ game.get_status_display }}</span>
+        <div class="space-x-2">
+          {% if game.status == 'waiting' %}
+            <a href="{% url 'join_game' game.id %}" class="bg-yellow-600 text-black hover:bg-yellow-700 rounded-md px-4 py-2 text-sm font-medium border-2 border-black transition-colors duration-200">
+              Join Game
+            </a>
+            <button hx-delete="{% url 'delete_game' game.id %}"
+                    hx-target="#game-list-container"
+                    hx-swap="innerHTML"
+                    class="bg-red-600 text-white hover:bg-red-700 rounded-md px-4 py-2 text-sm font-medium border-2 border-black transition-colors duration-200">
+              Delete
+            </button>
+          {% elif game.status == 'active' %}
+            <span class="bg-green-600 text-white rounded-md px-4 py-2 text-sm font-medium border-2 border-black">
+              Game in Progress
+            </span>
+          {% else %}
+            <span class="bg-gray-600 text-white rounded-md px-4 py-2 text-sm font-medium border-2 border-black">
+              Game Completed
+            </span>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-center text-gray-300">No games available.</p>
+{% endif %}

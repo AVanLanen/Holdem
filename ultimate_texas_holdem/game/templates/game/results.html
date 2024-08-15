@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load game_filters %}
+{% load static %}
+
+{% block content %}
+<div class="bg-green-900 text-white rounded-lg shadow-xl shadow-black p-6 w-full  mt-8 h-5/6 max-w-6xl mx-auto" id="game-area">
+  <div class="flex justify-between items-center mb-4">
+    <!-- Drew Hold'em Section -->
+    <div class="flex-grow text-center">
+      <h1 class="text-3xl font-bold">Game Results</h1>
+    </div>
+    <!-- Chips Section -->
+    <div class="bg-yellow-600 text-black rounded-full px-4 py-2 text-sm font-medium">
+      Chips: ${{ player.chips }}
+    </div>
+  </div>
+  <!-- Hands Row: Dealer and Player Hands on the Same Row -->
+  <div class="grid grid-cols-2 gap-6 mb-6">
+    <!-- Dealer's Hand -->
+    <div class="bg-green-800 rounded-lg p-4">
+      <div class="flex justify-between items-center mb-4">
+        <div class="text-lg font-bold">Dealer's Hand</div>
+        <div x-data="{ dealerWins: {{ dealer_wins | yesno:'true,false' }} }" 
+             :class="dealerWins ? 'bg-red-600' : 'bg-green-600'" 
+             class="text-black rounded-full px-4 py-2 text-sm font-medium">
+          {{ dealer_hand_description }}
+        </div>
+      </div>
+      <div class="flex justify-center space-x-4 mb-4 bg-green-700">
+        {% for card in dealer_hole_cards %}
+          <div class="bg-green-700 rounded-lg p-2 flex justify-center items-center w-20 h-28">
+            <img src="{% static card|card_image %}" alt="{{ card }}" class="max-w-full max-h-full object-contain">
+          </div>
+        {% endfor %}
+      </div>
+      <div class="text-center">
+        <p class="text-sm">Best Hand Cards: {{ dealer_best_hand|join:", " }}</p>
+      </div>
+    </div>
+
+    <!-- Player Results -->
+    <div class="bg-green-800 rounded-lg p-4">
+      {% for player_id, result in results.items %}
+        <div class="mb-4">
+          <div x-data="{ winnings: {{ result.winnings }} }" 
+               :class="winnings > 0 ? 'border-green-500' : winnings < 0 ? 'border-red-500' : 'border-gray-500'" 
+               class="border-2 rounded-lg p-4 bg-green-700">
+            <div class="flex justify-between items-center mb-4">
+              <div class="text-lg font-bold">Player {{ player_id }}</div>
+              <div :class="winnings > 0 ? 'bg-green-600' : 'bg-red-600'" 
+                   class="text-black rounded-full px-4 py-2 text-sm font-medium">
+                {{ result.hand }}
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <div class="flex justify-center space-x-4 mb-4">
+                  {% for card in result.hole_cards %}
+                    <div class="bg-green-600 rounded-lg p-2 flex justify-center items-center w-20 h-28">
+                      <img src="{% static card|card_image %}" alt="{{ card }}" class="max-w-full max-h-full object-contain">
+                    </div>
+                  {% endfor %}
+                </div>
+                <div class="text-center">
+                  {% if result.cards %}
+                    <p class="mb-2">Best Cards: <span class="font-medium">{{ result.cards|join:", " }}</span></p>
+                    <p class="text-lg font-bold" :class="winnings > 0 ? 'text-green-500' : winnings < 0 ? 'text-red-500' : 'text-gray-400'">
+                      {% if result.winnings < 0 %}
+                        <span class="mr-2">&#x2620;&#xFE0F;</span> {# Skull and crossbones emoji #}
+                        Loss: ${{ result.winnings }}
+                      {% else %}
+                        Winnings: ${{ result.winnings }}
+                      {% endif %}
+                    </p>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="bg-green-600 rounded-lg p-4">
+                <h3 class="text-lg font-bold mb-2">Bet Details</h3>
+                <div class="flex">
+                  <ul class="space-y-1">
+                    <li>Ante: ${{ result.bets.ante }}</li>
+                    <li>Blind: ${{ result.bets.blind }}</li>
+                    <li>Trips: ${{ result.bets.trips }}</li>
+                    <li>Play: ${{ result.bets.play }}</li>
+                  </ul>
+                </div>
+                <h3 class="text-lg font-bold mt-4 mb-2">Payouts</h3>
+                <ul class="space-y-1">
+                  <li>Ante: ${{ result.payouts.ante }}</li>
+                  <li>Blind: ${{ result.payouts.blind }}</li>
+                  <li>Trips: ${{ result.payouts.trips }}</li>
+                  <li>Play: ${{ result.payouts.play }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Community Cards -->
+  <div class="bg-green-800 rounded-lg p-4 mb-6">
+    <div class="text-lg font-bold mb-4 text-center">Community Cards</div>
+    <div class="flex justify-center space-x-2">
+      {% for card in community_cards %}
+        <div class="bg-green-700 rounded-lg p-2 flex justify-center items-center w-16 h-24">
+          <img src="{% static card|card_image %}" alt="{{ card }}" class="max-w-full max-h-full object-contain">
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="mt-6 flex justify-center">
+    <button hx-post="{% url 'start_new_round' game.id %}"
+            hx-target="#game-area"
+            hx-swap="innerHTML"
+            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-lg font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-12 px-6 py-2 border-2 border-black">
+      Start New Round
+    </button>
+  </div>
+</div>
+
+
+{% endblock %}
